@@ -1,4 +1,4 @@
-package data_monitor
+package syncbinlog
 
 import (
 	"context"
