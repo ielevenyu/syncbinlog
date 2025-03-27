@@ -78,8 +78,6 @@ func (dm *dataMonitor) Start() {
 		return
 	}
 	dm.Logger.Infof("dataMonitor start run.......")
-	// 开启续约
-	go dm.renewal()
 	lastSyncTime, err := dm.getSyncLastTime()
 	dm.Logger.Debugf("getSyncLastTime is: %v", time.Unix(lastSyncTime, 0).Local())
 	var startSynTime time.Time
@@ -96,6 +94,8 @@ func (dm *dataMonitor) Start() {
 		dm.Logger.Errorf("Failed to start sync with error: %v", err)
 		return
 	}
+	// 开启续约
+	go dm.renewal()
 	var ev *replication.BinlogEvent
 	for {
 		//ev, err = streamer.GetEvent(context.Background())
