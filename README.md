@@ -19,18 +19,17 @@ func main() {
 
 func startMonitorDb() {
 	go func() {
-		com := utils.NewServerCommonByRequestId("data_monitor")
-		kafkaConsumer := srv_basics.NewBizDataSyncKafka(com)
-		handler, err := data_monitor.NewDataMonitor(
-			data_monitor.WithServerId(100000),  //可以写死一个很大的数字即可eg:100000
-			data_monitor.WithDbHost("127.0.0.1"),// 数据库主库host
-			data_monitor.WithDbPort(3306),//数据库端口号
-			data_monitor.WithDbUser("root"),//监听账号，需要有REPLICATION SLAVE和REPLICATION CLIENT权限
-			data_monitor.WithDbPasswd(""),//账号密码
-			data_monitor.WithDbNames(""),//监听数据库
-			data_monitor.WithTableNames([]string{}),//监听table列表
-			data_monitor.WithDataConsumer(dataConsumer),//消费数据的接口实例
-			data_monitor.WithRedis(),// redis指针
+		kafkaConsumer := NewBizDataSyncKafka()
+		handler, err := syncbinlog.NewDataMonitor(
+			syncbinlog.WithServerId(100000),  //可以写死一个很大的数字即可eg:100000
+			syncbinlog.WithDbHost("127.0.0.1"),// 数据库主库host
+			syncbinlog.WithDbPort(3306),//数据库端口号
+			syncbinlog.WithDbUser("root"),//监听账号，需要有REPLICATION SLAVE和REPLICATION CLIENT权限
+			syncbinlog.WithDbPasswd(""),//账号密码
+			syncbinlog.WithDbNames(""),//监听数据库
+			syncbinlog.WithTableNames([]string{}),//监听table列表
+			syncbinlog.WithDataConsumer(dataConsumer),//消费数据的接口实例
+			syncbinlog.WithRedis(),// redis指针
 		)
 		if err != nil {
 			panic(fmt.Sprintf("startMonitorDb error: %s", err.Error()))
