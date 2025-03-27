@@ -7,9 +7,9 @@
 
 3、支持多表监听同步，松耦合接口方式消费数据。
 
-## 使用方法
+## start
 ````
-引入包：github.com/ielevenyu/syncbinlog
+引入包：github.com/ielevenyu/syncbinlog@v1.0.0
 
 在服务启动添加如下初始化代码：
 
