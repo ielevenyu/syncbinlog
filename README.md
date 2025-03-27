@@ -1,5 +1,12 @@
-# syncbinlog
+## syncbinlog
 基于go-mysql库实现的订阅mysql binlog工具，通常用来做数据同步通道
+## feature
+1、支持分布式环境下binlog订阅，确保只有一台容器同步。
+
+2、支持错误自动恢复，故障切换，同步binlog容器发送故障后可以自动切换到其他容器同步binlog
+
+3、支持多表监听同步，松耦合接口方式消费数据。
+
 ## 使用方法
 ````
 引入包：github.com/ielevenyu/syncbinlog
