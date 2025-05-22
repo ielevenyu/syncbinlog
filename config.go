@@ -12,13 +12,14 @@ type dataMonitor struct {
 	dbPort          uint64
 	dbUser          string
 	dbPasswd        string
-	dbName          string
+	dbNames         []string
 	tableNames      []string
 	redis           *rds.Client
 	Logger          loggers.Advanced
 	syncer          *replication.BinlogSyncer
 	dataConsumer    DataConsumer
 	tables          map[string]bool
+	dbs             map[string]bool
 	lastSynTime     int64
 	lastSynPos      uint32
 	lastSyncBinFile string
@@ -39,6 +40,7 @@ var (
 
 // MonitorDataMsg 数据消息定义
 type MonitorDataMsg struct {
+	DbName    string
 	TableName string        // 表名
 	Action    MonitorAction // 消息类型
 	Rows      [][]any       // mysql表的数据行数组
@@ -86,9 +88,9 @@ func WithDbPasswd(passwd string) Option {
 	}
 }
 
-func WithDbNames(dbName string) Option {
+func WithDbNames(dbNames []string) Option {
 	return func(dm *dataMonitor) error {
-		dm.dbName = dbName
+		dm.dbNames = dbNames
 		return nil
 	}
 }

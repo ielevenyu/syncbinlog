@@ -25,8 +25,8 @@ func NewDataMonitor(opts ...Option) (DataMonitorIter, error) {
 	if dm.redis == nil {
 		return nil, fmt.Errorf("redis is nil")
 	}
-	if len(dm.dbName) == 0 {
-		return nil, fmt.Errorf("dbName is empty")
+	if len(dm.dbNames) == 0 {
+		return nil, fmt.Errorf("dbNames is empty")
 	}
 	if len(dm.dbHost) == 0 {
 		return nil, fmt.Errorf("dbHost is empty")
@@ -49,7 +49,7 @@ func NewDataMonitor(opts ...Option) (DataMonitorIter, error) {
 	if dm.syncer == nil {
 		return nil, fmt.Errorf("NewBinlogSyncer error")
 	}
-	dm.fillTables()
+	dm.fillDbTables()
 	return dm, nil
 }
 
@@ -123,10 +123,11 @@ func (dm *dataMonitor) Start() {
 		}
 		switch e := ev.Event.(type) {
 		case *replication.RowsEvent:
-			if string(e.Table.Schema) == dm.dbName && dm.checkTable(string(e.Table.Table)) {
+			if dm.checkDb(string(e.Table.Schema)) && dm.checkTable(string(e.Table.Table)) {
 				dm.Logger.Infof("RowsEvent schema: %s, table: %s, eventType: %v", string(e.Table.Schema), string(e.Table.Table), ev.Header.EventType)
 				msg := &MonitorDataMsg{
 					Rows:      e.Rows,
+					DbName:    string(e.Table.Schema),
 					TableName: string(e.Table.Table),
 				}
 				switch ev.Header.EventType {
@@ -161,11 +162,19 @@ func (dm *dataMonitor) Start() {
 	}
 }
 
-func (dm *dataMonitor) fillTables() {
+func (dm *dataMonitor) fillDbTables() {
 	dm.tables = make(map[string]bool)
+	dm.dbs = make(map[string]bool)
+	// fill monitor table
 	if len(dm.tableNames) > 0 {
 		for _, table := range dm.tableNames {
 			dm.tables[table] = true
+		}
+	}
+	// fill monitor db
+	if len(dm.dbNames) > 0 {
+		for _, db := range dm.dbNames {
+			dm.dbs[db] = true
 		}
 	}
 }
@@ -175,6 +184,14 @@ func (dm *dataMonitor) checkTable(tableName string) bool {
 		return true
 	}
 	_, ok := dm.tables[tableName]
+	return ok
+}
+
+func (dm *dataMonitor) checkDb(dbName string) bool {
+	if len(dm.dbs) == 0 {
+		return true
+	}
+	_, ok := dm.dbs[dbName]
 	return ok
 }
 

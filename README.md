@@ -5,7 +5,7 @@
 
 2、支持错误自动恢复，故障切换，同步binlog容器发送故障后可以自动切换到其他容器同步binlog
 
-3、支持多表监听同步，松耦合接口方式消费数据。
+3、支持多库、多表监听同步，松耦合接口方式消费数据。
 
 ## start
 ````
@@ -26,7 +26,7 @@ func startMonitorDb() {
 			syncbinlog.WithDbPort(3306),//数据库端口号
 			syncbinlog.WithDbUser("root"),//监听账号，需要有REPLICATION SLAVE和REPLICATION CLIENT权限
 			syncbinlog.WithDbPasswd(""),//账号密码
-			syncbinlog.WithDbNames(""),//监听数据库
+			syncbinlog.WithDbNames([]string{}),//监听数据库列表
 			syncbinlog.WithTableNames([]string{}),//监听table列表
 			syncbinlog.WithDataConsumer(dataConsumer),//消费数据的接口实例
 			syncbinlog.WithRedis(),// redis指针
