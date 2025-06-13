@@ -4,6 +4,7 @@ go 1.22.2
 
 require (
 	github.com/go-mysql-org/go-mysql v1.8.0
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/siddontang/go-log v0.0.0-20180807004314-8d05993dda07
 )
