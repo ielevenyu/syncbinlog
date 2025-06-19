@@ -100,7 +100,7 @@ func (ec *esClient) InsertIndex(index string, obj interface{}) error {
 	m := ec.ConvertToMap(obj)
 	//// 若需要改为datastream 则在插入数据时需要加上@timestamp字段
 	//m[TimestampFieldKey] = time.Now().Format(time.RFC3339Nano)
-
+	fmt.Println(fmt.Sprintf("InsertIndex m: %s", m))
 	_, err := ec.client.Index().
 		Index(index).
 		BodyJson(m).

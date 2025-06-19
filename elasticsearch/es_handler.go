@@ -1,4 +1,4 @@
-package example
+package elasticsearch
 
 import (
 	"fmt"
@@ -7,21 +7,20 @@ import (
 	"time"
 
 	"github.com/ielevenyu/syncbinlog/config"
-	"github.com/ielevenyu/syncbinlog/example/elasticsearch"
 	"github.com/olivere/elastic/v7"
 )
 
-type esDataHandler struct {
-	esClient elasticsearch.EsClient
+type EsDataHandler struct {
+	esClient EsClient
 }
 
-func NewEsDataHandler(es elasticsearch.EsClient) *esDataHandler {
-	return &esDataHandler{
+func NewEsDataHandler(es EsClient) *EsDataHandler {
+	return &EsDataHandler{
 		esClient: es,
 	}
 }
 
-func (c *esDataHandler) EsDataProcess(msg *config.MonitorDataMsg, records []any) error {
+func (c *EsDataHandler) EsDataProcess(msg *config.MonitorDataMsg, records []any) error {
 	if c.esClient == nil {
 		return nil
 	}
@@ -47,7 +46,7 @@ func (c *esDataHandler) EsDataProcess(msg *config.MonitorDataMsg, records []any)
 	return nil
 }
 
-func (c *esDataHandler) updateAll(indexName string, record any) error {
+func (c *EsDataHandler) updateAll(indexName string, record any) error {
 	docId, err := c.queryDocIdByCourseTableId(indexName, record)
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func (c *esDataHandler) updateAll(indexName string, record any) error {
 	return c.esClient.UpdateAll(indexName, docId, record)
 }
 
-func (c *esDataHandler) queryDocIdByCourseTableId(indexName string, record any) (string, error) {
+func (c *EsDataHandler) queryDocIdByCourseTableId(indexName string, record any) (string, error) {
 	boolQuery := c.buildBoolQuery(record)
 	if boolQuery == nil {
 		return "", fmt.Errorf("buildBoolQuery error! ")
@@ -74,7 +73,7 @@ func (c *esDataHandler) queryDocIdByCourseTableId(indexName string, record any) 
 	return hits[0].Id, nil
 }
 
-func (c *esDataHandler) buildBoolQuery(record any) *elastic.BoolQuery {
+func (c *EsDataHandler) buildBoolQuery(record any) *elastic.BoolQuery {
 	boolQuery := elastic.NewBoolQuery()
 	recordV := reflect.ValueOf(record)
 	idFieldV := c.fieldNestByName(recordV, "ID")
@@ -96,7 +95,7 @@ func (c *esDataHandler) buildBoolQuery(record any) *elastic.BoolQuery {
 	return boolQuery
 }
 
-func (c *esDataHandler) fieldNestByName(result reflect.Value, name string) reflect.Value {
+func (c *EsDataHandler) fieldNestByName(result reflect.Value, name string) reflect.Value {
 	if result.Kind() == reflect.Ptr {
 		result = result.Elem()
 	}

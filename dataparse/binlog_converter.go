@@ -16,12 +16,11 @@ import (
 // getStructFields 获取结构体的所有字段（包括嵌套结构体的字段）
 func (h *tableDataHandler[T]) getStructFields(t reflect.Type) []reflect.StructField {
 	var fields []reflect.StructField
-
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
 		// 如果是结构体类型（除了time.Time），递归获取其字段
-		if field.Type.Kind() == reflect.Struct && field.Type != reflect.TypeOf(time.Time{}) {
+		if field.Type.Kind() == reflect.Struct && !field.Type.ConvertibleTo(reflect.TypeOf(time.Time{})) {
 			nestedFields := h.getStructFields(field.Type)
 			// 为嵌套字段添加前缀
 			for _, nestedField := range nestedFields {
@@ -53,7 +52,7 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 
 	// 处理嵌套结构体
 	if field.Kind() == reflect.Struct {
-		if field.Type() == reflect.TypeOf(time.Time{}) {
+		if field.Type().ConvertibleTo(reflect.TypeOf(time.Time{})) {
 			return h.setTimeValue(field, value, fieldName)
 		}
 		// 如果是其他结构体类型，尝试将值转换为结构体
@@ -184,19 +183,19 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 func (h *tableDataHandler[T]) setTimeValue(field reflect.Value, value any, fieldName string) error {
 	switch v := value.(type) {
 	case time.Time:
-		field.Set(reflect.ValueOf(v))
+		field.Set(reflect.ValueOf(v).Convert(field.Type()))
 	case string:
 		t, err := time.Parse(mysql.TimeFormat, v)
 		if err != nil {
 			return fmt.Errorf("cannot parse time for field %s, err: %+v", fieldName, err)
 		}
-		field.Set(reflect.ValueOf(t))
+		field.Set(reflect.ValueOf(t).Convert(field.Type()))
 	case int64, uint64:
 		t, err := h.timestampToTime(v)
 		if err != nil {
 			return fmt.Errorf("cannot parse time for field %s, err: %s", fieldName, err.Error())
 		}
-		field.Set(reflect.ValueOf(t))
+		field.Set(reflect.ValueOf(t).Convert(field.Type()))
 	default:
 		return fmt.Errorf("cannot convert value[%+v] to time for field %s", reflect.TypeOf(v), fieldName)
 	}
