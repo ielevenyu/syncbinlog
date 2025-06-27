@@ -176,16 +176,19 @@ func (dm *dataMonitor) Start() {
 				switch ev.Header.EventType {
 				case replication.WRITE_ROWS_EVENTv2, replication.WRITE_ROWS_EVENTv1, replication.WRITE_ROWS_EVENTv0:
 					msg.Action = config.MonitorActionInsert
-					dm.dataConsumer.Handler(msg)
-					dm.Logger.Infof("rows data: %v", e.Rows)
+					if err := dm.dataConsumer.Handler(msg); err != nil {
+						dm.Logger.Errorf("dataConsumer.Handler error msg: %+v, err: %+v", msg, err)
+					}
 				case replication.UPDATE_ROWS_EVENTv2, replication.UPDATE_ROWS_EVENTv1, replication.UPDATE_ROWS_EVENTv0:
 					msg.Action = config.MonitorActionUpdate
-					dm.dataConsumer.Handler(msg)
-					dm.Logger.Infof("rows data: %v", e.Rows)
+					if err := dm.dataConsumer.Handler(msg); err != nil {
+						dm.Logger.Errorf("dataConsumer.Handler error msg: %+v, err: %+v", msg, err)
+					}
 				case replication.DELETE_ROWS_EVENTv2, replication.DELETE_ROWS_EVENTv1, replication.DELETE_ROWS_EVENTv0:
 					msg.Action = config.MonitorActionDelete
-					dm.dataConsumer.Handler(msg)
-					dm.Logger.Infof("rows data: %v", e.Rows)
+					if err := dm.dataConsumer.Handler(msg); err != nil {
+						dm.Logger.Errorf("dataConsumer.Handler error msg: %+v, err: %+v", msg, err)
+					}
 				default:
 				}
 			}

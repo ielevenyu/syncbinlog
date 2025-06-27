@@ -73,3 +73,8 @@ func (h *tableDataHandler[T]) dataHandler(msg *config.MonitorDataMsg) error {
 	}
 	return h.handler(msg, records)
 }
+
+// ClearHandlerMap 清空处理器映射，主要用于测试
+func ClearHandlerMap() {
+	handlerMap = sync.Map{}
+}

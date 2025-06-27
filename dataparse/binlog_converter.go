@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-mysql-org/go-mysql/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/ielevenyu/syncbinlog/config"
 	"github.com/siddontang/go-log/log"
@@ -65,7 +64,7 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 	// 处理基本类型
 	switch field.Kind() {
 	case reflect.String:
-		field.SetString(fmt.Sprint(value))
+		field.SetString(fmt.Sprintf("%s", value))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch v := value.(type) {
 		case int64:
@@ -87,6 +86,13 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 			field.SetInt(int64(v))
 		case uint8:
 			field.SetInt(int64(v))
+		case string:
+			// 处理字符串到整数的转换
+			intVal, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert string '%s' to int for field %s", v, fieldName)
+			}
+			field.SetInt(intVal)
 		default:
 			return fmt.Errorf("cannot convert value to int for field %s", fieldName)
 		}
@@ -95,6 +101,8 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 		case uint64:
 			field.SetUint(v)
 		case uint32:
+			field.SetUint(uint64(v))
+		case uint16:
 			field.SetUint(uint64(v))
 		case uint:
 			field.SetUint(uint64(v))
@@ -110,6 +118,11 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 				return fmt.Errorf("cannot convert negative value to uint for field %s", fieldName)
 			}
 			field.SetUint(uint64(v))
+		case int16:
+			if v < 0 {
+				return fmt.Errorf("cannot convert negative value to uint for field %s", fieldName)
+			}
+			field.SetUint(uint64(v))
 		case int:
 			if v < 0 {
 				return fmt.Errorf("cannot convert negative value to uint for field %s", fieldName)
@@ -120,8 +133,15 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 				return fmt.Errorf("cannot convert negative value to uint for field %s", fieldName)
 			}
 			field.SetUint(uint64(v))
+		case string:
+			// 处理字符串到无符号整数的转换
+			uintVal, err := strconv.ParseUint(v, 10, 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert string '%s' to uint for field %s", v, fieldName)
+			}
+			field.SetUint(uintVal)
 		default:
-			return fmt.Errorf("cannot convert value to uint for field %s, type: %s", fieldName, v)
+			return fmt.Errorf("cannot convert value to uint for field %s, type: %v", fieldName, v)
 		}
 	case reflect.Float32, reflect.Float64:
 		switch v := value.(type) {
@@ -158,8 +178,15 @@ func (h *tableDataHandler[T]) setFieldValue(field reflect.Value, value any, fiel
 			field.SetBool(v != 0)
 		case uint64:
 			field.SetBool(v != 0)
+		case string:
+			// 处理字符串到布尔值的转换
+			boolVal, err := strconv.ParseBool(v)
+			if err != nil {
+				return fmt.Errorf("cannot convert string '%s' to bool for field %s", v, fieldName)
+			}
+			field.SetBool(boolVal)
 		default:
-			return fmt.Errorf("cannot convert value to bool for field %s, type: %s", fieldName, v)
+			return fmt.Errorf("cannot convert value to bool for field %s, type: %v", fieldName, v)
 		}
 	case reflect.Slice:
 		if field.Type().Elem().Kind() == reflect.Uint8 {
@@ -185,7 +212,7 @@ func (h *tableDataHandler[T]) setTimeValue(field reflect.Value, value any, field
 	case time.Time:
 		field.Set(reflect.ValueOf(v).Convert(field.Type()))
 	case string:
-		t, err := time.Parse(mysql.TimeFormat, v)
+		t, err := h.parseTime(v)
 		if err != nil {
 			return fmt.Errorf("cannot parse time for field %s, err: %+v", fieldName, err)
 		}
@@ -305,13 +332,41 @@ func (h *tableDataHandler[T]) ConvertBinlogToStruct(row []any, tableInfo *config
 		// 设置字段值
 		if err := h.setFieldValue(value.FieldByName(field.Name), rowValue, fieldName); err != nil {
 			log.Errorf("setFieldValue error fieldName: %s, rowValue: %v, err: %s", fieldName, rowValue, err.Error())
-			continue
+			return result, fmt.Errorf("failed to set field %s: %w", fieldName, err)
 		}
 	}
 
 	return result, nil
 }
 
+// parseTime 尝试用多种常见格式解析时间字符串。
+// 支持的格式包括 "2006-01-02 15:04:05", "2006-01-02", "20060102", RFC3339 等。
+func (h *tableDataHandler[T]) parseTime(dateStr string) (time.Time, error) {
+	// 定义所有支持的时间格式布局
+	// 顺序可以调整，但通常把最常见的放前面
+	layouts := []string{
+		"2006-01-02 15:04:05", // 标准格式
+		time.RFC3339,          // "2006-01-02T15:04:05Z07:00"
+		"2006-01-02",          // 只有日期
+		"20060102",            // 紧凑型日期
+		"2006/01/02 15:04:05", // 使用斜杠
+		"2006/01/02",          // 使用斜杠的日期
+		"01-02-2006",          // 月-日-年 格式
+		"02-Jan-2006",         // 带月份缩写
+	}
+
+	// 遍历所有布局，尝试解析
+	for _, layout := range layouts {
+		t, err := time.Parse(layout, dateStr)
+		if err == nil {
+			// 解析成功，直接返回
+			return t, nil
+		}
+	}
+
+	// 如果所有布局都失败了，返回错误
+	return time.Time{}, fmt.Errorf("unable to parse date: \"%s\"", dateStr)
+}
 func (h *tableDataHandler[T]) timestampToTime(timestamp any) (time.Time, error) {
 	var stamp int64
 	switch timestamp.(type) {

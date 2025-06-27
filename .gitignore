@@ -1,0 +1,8 @@
+TESTING.md
+config/config_test.go
+dataparse/binlog_converter_test.go
+dataparse/handler_test.go
+integration_test.go
+mock_redis_test.go
+syncbinlog_test.go
+test_runner.sh
